@@ -1,0 +1,312 @@
+<!--
+s.abariiii — Lightroom presets shop
+POSECARTS-inspired layout (black & white) • Razorpay client checkout (placeholder) • Google Sheets order logging (Apps Script webhook)
+
+INSTRUCTIONS (short):
+1) Create a public GitHub repo (e.g., s-abariiii-shop) and add this file as index.html.
+2) Upload preset .zip files and thumbnails into /assets/.
+3) Deploy the Apps Script (see bottom) and paste the Web App URL into GOOGLE_SHEETS_WEBHOOK.
+4) Paste your Razorpay Key ID into RAZORPAY_KEY_ID.
+
+Notes: This single-file site is tailored to look and behave like posecarts.in (catalog, sale badges, quick view, sticky header, mobile-friendly). For production-grade security, add a server-side order creation + signature verification.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>s.abariiii — Lightroom Presets</title>
+<meta name="description" content="s.abariiii — minimal black & white Lightroom presets store. Mobile + desktop friendly." />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--white:#fff;--black:#000;--muted:#9aa0a6;--card:#0b0b0b}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;color:var(--white);background:var(--black)}
+header{position:sticky;top:0;z-index:90;background:linear-gradient(180deg,rgba(0,0,0,0.9),rgba(0,0,0,0.85));backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,0.03)}
+.header-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:48px;height:48px;border-radius:8px;background:var(--white);color:var(--black);display:grid;place-items:center;font-weight:800}
+.nav{display:flex;gap:14px;align-items:center}
+.nav a{color:var(--white);text-decoration:none;font-weight:600}
+.topbar{font-size:13px;color:var(--muted);padding:6px 0;text-align:center;border-bottom:1px solid rgba(255,255,255,0.02)}
+.container{max-width:1200px;margin:18px auto;padding:0 14px}
+.hero{display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
+.hero-left{max-width:720px}
+.h1{font-size:28px;margin:0}
+.lead{color:var(--muted);margin-top:8px}
+.cta{display:flex;gap:10px;margin-top:12px}
+.btn{background:var(--white);color:var(--black);padding:10px 14px;border-radius:8px;border:0;font-weight:700;cursor:pointer}
+.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.card{background:var(--card);border-radius:12px;padding:12px;display:flex;flex-direction:column;min-height:320px;border:1px solid rgba(255,255,255,0.02)}
+.thumb{height:160px;border-radius:8px;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.product-title{font-weight:700;margin-top:10px}
+.product-desc{font-size:13px;color:var(--muted);margin-top:6px}
+.price-row{display:flex;align-items:center;justify-content:space-between;margin-top:auto}
+.price{font-weight:800}
+.badge{background:#fff;color:#000;padding:6px 8px;border-radius:6px;font-weight:700;font-size:12px}
+.sale{position:absolute;left:12px;top:12px;background:#fff;color:#000;padding:6px 10px;border-radius:6px;font-weight:800}
+.card-wrap{position:relative}
+.footer{padding:18px;text-align:center;color:var(--muted);font-size:13px;margin-top:18px}
+.modal{position:fixed;left:0;top:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:120}
+.modal.open{display:flex}
+.sheet{background:#080808;border-radius:12px;padding:16px;width:96%;max-width:560px}
+.input{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--white);margin-top:8px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#fff;padding:10px 14px;border-radius:8px;color:#000;display:none;z-index:130}
+@media (max-width:640px){.h1{font-size:20px}.grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}}
+</style>
+</head>
+<body>
+  <div class="topbar">Fast delivery • Secure payments • Instant download after payment</div>
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo">S</div>
+        <div>
+          <div style="font-weight:800">s.abariiii</div>
+          <div style="font-size:12px;color:var(--muted)">Lightroom presets</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <a href="#">Home</a>
+        <a href="#products">Presets</a>
+        <a href="#contact">Contact</a>
+        <button id="orders-btn" class="ghost">Orders</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div class="hero-left">
+        <h1 class="h1">Cinematic & clean Lightroom presets — curated for creators</h1>
+        <p class="lead">Mobile + desktop-ready presets. Secure Razorpay checkout and instant download after payment. Try the free demo before buying.</p>
+        <div class="cta">
+          <button id="demo-btn" class="btn">Free Demo</button>
+          <button id="browse-btn" class="ghost">Browse Presets</button>
+        </div>
+      </div>
+      <div style="min-width:220px;text-align:right">
+        <div style="background:linear-gradient(180deg,#fff,#eee);color:#000;padding:12px;border-radius:12px;display:inline-block">Sale • Limited Time</div>
+      </div>
+    </section>
+
+    <section id="products">
+      <div class="grid" id="products-grid"></div>
+    </section>
+
+  </main>
+
+  <div class="modal" id="modal">
+    <div class="sheet">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong id="modal-title">Buy</strong>
+        <button id="close-modal" class="ghost">Close</button>
+      </div>
+      <div id="modal-body" style="margin-top:12px">
+        <div id="modal-desc" style="color:var(--muted)"></div>
+        <input id="buyer-name" class="input" placeholder="Your name" />
+        <input id="buyer-email" class="input" placeholder="Email (we'll record order)" />
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button id="pay-razorpay" class="btn">Pay ₹<span id="modal-price">0</span></button>
+          <button id="pay-later" class="ghost">Pay later</button>
+        </div>
+        <div style="margin-top:10px;color:var(--muted);font-size:13px">After successful payment the download will start immediately and the order will be saved to your Google Sheet.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <div class="footer">© s.abariiii — Lightroom presets • Built for GitHub Pages</div>
+
+<script>
+// ================ CONFIG ================
+const RAZORPAY_KEY_ID = 'rzp_test_YOUR_KEY';
+const GOOGLE_SHEETS_WEBHOOK = 'https://script.google.com/macros/s/YOUR_WEB_APP_ID/exec';
+
+// products - update with your files and thumbnails in /assets/
+const products = [
+  {id:'p_forest',title:'Forest Glow',price:399,desc:'Warm greens — desktop & mobile',thumb:'assets/forest.jpg',file:'assets/forest-glow.zip',sale:true,stock:10},
+  {id:'p_sun',title:'Sunflare',price:299,desc:'Bright warm tones — mobile ready',thumb:'assets/sun.jpg',file:'assets/sunflare.zip',sale:false,stock:5},
+  {id:'p_min',title:'Minimal Clean',price:249,desc:'Clean tones for portraits',thumb:'assets/minimal.jpg',file:'assets/minimal.zip',sale:false,stock:0}
+];
+
+const demoFile = 'assets/demo-preset.zip';
+let orders = JSON.parse(localStorage.getItem('s_abariiii_orders')||'[]');
+
+// render
+const grid = document.getElementById('products-grid');
+function renderProducts(){
+  grid.innerHTML='';
+  products.forEach(p=>{
+    const div = document.createElement('div'); div.className='card';
+    div.innerHTML = `
+      <div class="card-wrap">
+        ${p.sale ? '<div class="sale">SALE</div>' : ''}
+        <div class="thumb"><img src="${p.thumb}" alt="${p.title}"></div>
+        <div class="product-title">${p.title}</div>
+        <div class="product-desc">${p.desc}</div>
+        <div class="price-row">
+          <div class="price">₹${p.price}</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" data-buy="${p.id}" ${p.stock===0? 'disabled' : ''}>Buy</button>
+            <button class="ghost" data-quick="${p.id}">${p.stock===0? 'Sold out' : 'Quick view'}</button>
+          </div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+}
+renderProducts();
+
+// search
+document.getElementById('search')?.addEventListener('input',e=>{
+  const q = e.target.value.toLowerCase();
+  const filtered = products.filter(p=>p.title.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q));
+  const old = grid.innerHTML=''; filtered.forEach(p=>{
+    const div = document.createElement('div'); div.className='card';
+    div.innerHTML = `
+      <div class="card-wrap">
+        ${p.sale ? '<div class="sale">SALE</div>' : ''}
+        <div class="thumb"><img src="${p.thumb}" alt="${p.title}"></div>
+        <div class="product-title">${p.title}</div>
+        <div class="product-desc">${p.desc}</div>
+        <div class="price-row">
+          <div class="price">₹${p.price}</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" data-buy="${p.id}" ${p.stock===0? 'disabled' : ''}>Buy</button>
+            <button class="ghost" data-quick="${p.id}">${p.stock===0? 'Sold out' : 'Quick view'}</button>
+          </div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(div);
+  })
+});
+
+// quick view / buy
+let currentProduct = null;
+document.addEventListener('click',e=>{
+  if(e.target.matches('[data-quick]')){
+    const id = e.target.getAttribute('data-quick'); openModalForProduct(id, true);
+  }
+  if(e.target.matches('[data-buy]')){
+    const id = e.target.getAttribute('data-buy'); openModalForProduct(id,false);
+  }
+  if(e.target.id==='close-modal') document.getElementById('modal').classList.remove('open');
+  if(e.target.id==='demo-btn') { if(!demoFile){showToast('Upload demo-preset.zip to /assets/ to enable demo.'); return;} window.location.href = demoFile }
+  if(e.target.id === 'orders-btn') viewOrders();
+});
+
+function openModalForProduct(id, preview=false){
+  currentProduct = products.find(p=>p.id===id);
+  document.getElementById('modal-title').textContent = (preview? 'Preview: ':'Buy: ') + currentProduct.title;
+  document.getElementById('modal-desc').textContent = currentProduct.desc + (preview? ' — demo will be used.' : '');
+  document.getElementById('modal-price').textContent = currentProduct.price;
+  document.getElementById('modal').classList.add('open');
+}
+
+// Razorpay checkout (client) — for testing only
+function startRazorpayCheckout(product, buyer){
+  if(!RAZORPAY_KEY_ID || RAZORPAY_KEY_ID.includes('YOUR_KEY')){
+    const order = createLocalOrder(product,buyer,'razorpay-simulated',true,'SIMULATED_ID');
+    document.getElementById('modal').classList.remove('open');
+    showToast('Simulation: Payment complete — download link generated.');
+    prompt('Download link (simulation):', order.download);
+    return;
+  }
+  const amount = product.price * 100;
+  const options = {
+    key: RAZORPAY_KEY_ID,
+    amount: amount,
+    currency: 'INR',
+    name: 's.abariiii',
+    description: product.title,
+    handler: function(response){
+      const order = createLocalOrder(product,buyer,true,'razorpay',response.razorpay_payment_id);
+      document.getElementById('modal').classList.remove('open');
+      // send to sheet then download
+      sendOrderToSheet(order).then(()=>{ showToast('Payment recorded — download starting...'); window.location.href = order.download }).catch(()=>{ showToast('Saved locally but failed to save to sheet.'); window.location.href = order.download })
+    },
+    prefill: {name:buyer.name || '', email: buyer.email || ''}
+  };
+  const script = document.createElement('script'); script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+  script.onload = ()=>{ const rzp = new Razorpay(options); rzp.open(); };
+  document.head.appendChild(script);
+}
+
+// pay button
+document.getElementById('pay-razorpay').addEventListener('click', ()=>{
+  if(!currentProduct){showToast('Select product');return}
+  const buyer = {name: document.getElementById('buyer-name').value || 'Customer', email: document.getElementById('buyer-email').value || ''};
+  startRazorpayCheckout(currentProduct,buyer);
+});
+
+// pay later
+document.getElementById('pay-later').addEventListener('click', ()=>{
+  if(!currentProduct){showToast('Select product');return}
+  const buyer = {name: document.getElementById('buyer-name').value || 'Customer', email: document.getElementById('buyer-email').value || ''};
+  const order = createLocalOrder(currentProduct,buyer,'manual',false,null);
+  sendOrderToSheet(order).then(()=>{ showToast('Order saved to sheet (manual)'); document.getElementById('modal').classList.remove('open'); prompt('Manual order:', JSON.stringify(order)) }).catch(()=>{ showToast('Failed to save — saved locally'); document.getElementById('modal').classList.remove('open'); prompt('Order saved locally:', JSON.stringify(order)) })
+});
+
+function createLocalOrder(product,buyer,method,paid,paymentId){
+  const id = 'order_' + Date.now();
+  const download = window.location.origin + '/' + product.file; // insecure direct link
+  const order = {id,product:product.id,title:product.title,price:product.price,name:buyer.name,email:buyer.email,method,paid,paymentId,download,createdAt:new Date().toISOString()}
+  orders.push(order); localStorage.setItem('s_abariiii_orders',JSON.stringify(orders));
+  return order;
+}
+
+async function sendOrderToSheet(order){
+  if(!GOOGLE_SHEETS_WEBHOOK || GOOGLE_SHEETS_WEBHOOK.includes('YOUR_WEB_APP_ID')) throw new Error('Webhook not configured');
+  const payload = {action:'new_order', order};
+  const resp = await fetch(GOOGLE_SHEETS_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(!resp.ok) throw new Error('Webhook failed');
+  return resp.json();
+}
+
+function viewOrders(){
+  let msg = 'Local orders (most recent first):
+
+'; const list = orders.slice().reverse(); list.forEach(o=>{ msg += `${o.id} — ${o.title} — ₹${o.price} — ${o.method} — paid:${o.paid} — ${o.paymentId || ''}
+` }); msg += '
+Open your Google Sheet to see recorded orders.'; alert(msg);
+}
+
+function showToast(text,ms=2200){const t=document.getElementById('toast');t.textContent=text;t.style.display='block';setTimeout(()=>t.style.display='none',ms)}
+
+window.listOrders = ()=>orders;
+</script>
+
+<!--
+Google Apps Script (paste into Apps Script editor, Deploy → Web app, Anyone access)
+
+function doPost(e){
+  try{
+    var data = JSON.parse(e.postData.contents);
+    if(data.action === 'new_order' && data.order){
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet = ss.getSheetByName('orders');
+      if(!sheet) sheet = ss.insertSheet('orders');
+      var headers = ['timestamp','order_id','product','title','price','name','email','method','paid','paymentId','download'];
+      if(sheet.getLastRow() === 0) sheet.appendRow(headers);
+      var o = data.order;
+      sheet.appendRow([new Date(), o.id, o.product, o.title, o.price, o.name, o.email, o.method, o.paid, o.paymentId || '', o.download || '']);
+      return ContentService.createTextOutput(JSON.stringify({status:'ok'})).setMimeType(ContentService.MimeType.JSON);
+    }
+    return ContentService.createTextOutput(JSON.stringify({status:'ignored'})).setMimeType(ContentService.MimeType.JSON);
+  }catch(err){
+    return ContentService.createTextOutput(JSON.stringify({status:'error',message:err.message})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+Security reminder: For production verify Razorpay signatures on a server before issuing download links.
+-->
+
+</body>
+</html>
